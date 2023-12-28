@@ -79,6 +79,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/PluginProcessor.cpp
     src/PluginProcessor.h
     src/StateVariableFilter.h
+    src/ThreeBandEQ.h
 )
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC

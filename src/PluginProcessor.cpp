@@ -63,11 +63,14 @@ void AudioProcessor::prepareToPlay(double sampleRate, [[maybe_unused]] int sampl
     midsSmoother.reset(sampleRate, smoothTime);
     trebleSmoother.reset(sampleRate, smoothTime);
 
+    eq.prepare(float(sampleRate));
+
     reset();
 }
 
 void AudioProcessor::releaseResources()
 {
+    // do nothing
 }
 
 void AudioProcessor::reset()
@@ -76,14 +79,7 @@ void AudioProcessor::reset()
     midsSmoother.setCurrentAndTargetValue(midsParam->get());
     trebleSmoother.setCurrentAndTargetValue(trebleParam->get());
 
-    bassFilter.reset();
-    midsFilter1.reset();
-    midsFilter2.reset();
-    trebleFilter.reset();
-
-    lastBass = -999.0f;
-    lastMids = -999.0f;
-    lastTreble = -999.0f;
+    eq.reset();
 }
 
 bool AudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
@@ -100,30 +96,9 @@ void AudioProcessor::update() noexcept
 
 void AudioProcessor::smoothen() noexcept
 {
-    float sampleRate = float(getSampleRate());
-
-    constexpr float lowFreq = 220.0f;
-    constexpr float highFreq = 2200.0f;
-    constexpr float Q = 0.6f;
-
-    bass = bassSmoother.getNextValue();
-    if (bass != lastBass) {
-        bassFilter.lowShelf(sampleRate, lowFreq, Q, bass);
-        lastBass = bass;
-    }
-
-    mids = midsSmoother.getNextValue();
-    if (mids != lastMids) {
-        midsFilter1.highShelf(sampleRate, lowFreq, Q, mids);
-        midsFilter2.highShelf(sampleRate, highFreq, Q, -mids);
-        lastMids = mids;
-    }
-
-    treble = trebleSmoother.getNextValue();
-    if (treble != lastTreble) {
-        trebleFilter.highShelf(sampleRate, highFreq, Q, treble);
-        lastTreble = treble;
-    }
+    eq.setBassGain(bassSmoother.getNextValue());
+    eq.setMidsGain(midsSmoother.getNextValue());
+    eq.setTrebleGain(trebleSmoother.getNextValue());
 }
 
 void AudioProcessor::processBlock(
@@ -150,15 +125,8 @@ void AudioProcessor::processBlock(
         float sampleL = channelL[sample];
         float sampleR = channelR[sample];
 
-        sampleL = bassFilter.processSample(0, sampleL);
-        sampleL = midsFilter1.processSample(0, sampleL);
-        sampleL = midsFilter2.processSample(0, sampleL);
-        sampleL = trebleFilter.processSample(0, sampleL);
-
-        sampleR = bassFilter.processSample(1, sampleR);
-        sampleR = midsFilter1.processSample(1, sampleR);
-        sampleR = midsFilter2.processSample(1, sampleR);
-        sampleR = trebleFilter.processSample(1, sampleR);
+        sampleL = eq.processSample(0, sampleL);
+        sampleR = eq.processSample(1, sampleR);
 
         channelL[sample] = sampleL;
         channelR[sample] = sampleR;

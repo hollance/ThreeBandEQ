@@ -1,7 +1,7 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "StateVariableFilter.h"
+#include "ThreeBandEQ.h"
 
 namespace ParameterID
 {
@@ -58,14 +58,7 @@ private:
     juce::LinearSmoothedValue<float> midsSmoother;
     juce::LinearSmoothedValue<float> trebleSmoother;
 
-    float bass, lastBass;
-    float mids, lastMids;
-    float treble, lastTreble;
-
-    StateVariableFilter<float, 2> bassFilter;
-    StateVariableFilter<float, 2> midsFilter1;
-    StateVariableFilter<float, 2> midsFilter2;
-    StateVariableFilter<float, 2> trebleFilter;
+    ThreeBandEQ<float, 2> eq;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioProcessor)
 };
