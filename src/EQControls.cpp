@@ -10,9 +10,13 @@ EQControls::EQControls(Parameters& params_) :
     bands[1].label = "MIDS";
     bands[2].label = "TREBLE";
 
-    bassAttachment.sendInitialUpdate();
-    midsAttachment.sendInitialUpdate();
-    trebleAttachment.sendInitialUpdate();
+    bands[0].attachment = &bassAttachment;
+    bands[1].attachment = &midsAttachment;
+    bands[2].attachment = &trebleAttachment;
+
+    for (auto& band : bands) {
+        band.attachment->sendInitialUpdate();
+    }
 }
 
 void EQControls::resized()
@@ -21,6 +25,10 @@ void EQControls::resized()
     bands[0].rect.setBounds(0, 0, bounds.getWidth() / 3, bounds.getHeight());
     bands[1].rect.setBounds(bands[0].rect.getRight(), 0, bounds.getWidth() / 3, bounds.getHeight());
     bands[2].rect.setBounds(bands[1].rect.getRight(), 0, bounds.getWidth() - bands[1].rect.getRight(), bounds.getHeight());
+
+    for (auto& band : bands) {
+        band.innerRect = band.rect.withTrimmedTop(20).withTrimmedBottom(40).reduced(10, 0);
+    }
 }
 
 void EQControls::paint(juce::Graphics& g)
@@ -37,7 +45,7 @@ void EQControls::paint(juce::Graphics& g)
         g.setGradientFill(gradient);
         g.fillRect(gradientRect);
 
-        auto rect = band.rect.withTrimmedTop(20).withTrimmedBottom(40).reduced(10, 0);
+        auto rect = band.innerRect;
         g.setColour(juce::Colour(90, 90, 90));
         g.fillRect(rect.getX(), rect.getCentreY(), rect.getWidth(), 1);
 
@@ -62,4 +70,37 @@ void EQControls::parameterUpdated(int index, float value)
 {
     bands[size_t(index)].value = value;
     repaint();
+}
+
+void EQControls::mouseDown(const juce::MouseEvent& event)
+{
+    if (event.getMouseDownX() < bands[0].rect.getRight()) {
+        activeBand = &bands[0];
+    } else if (event.getMouseDownX() < bands[1].rect.getRight()) {
+        activeBand = &bands[1];
+    } else {
+        activeBand = &bands[2];
+    }
+
+    startPos = event.position.getY();
+    startValue = activeBand->value;
+    activeBand->attachment->beginGesture();
+}
+
+void EQControls::mouseDrag(const juce::MouseEvent& event)
+{
+    if (activeBand != nullptr) {
+        float distance = event.position.getY() - startPos;
+        float db = distance * 12.0f / float(activeBand->innerRect.getHeight());
+        float newValue = std::clamp(startValue - db, -6.0f, 6.0f);
+        activeBand->attachment->setValueAsPartOfGesture(newValue);
+    }
+}
+
+void EQControls::mouseUp([[maybe_unused]] const juce::MouseEvent& event)
+{
+    if (activeBand != nullptr) {
+        activeBand->attachment->endGesture();
+        activeBand = nullptr;
+    }
 }

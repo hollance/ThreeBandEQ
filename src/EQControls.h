@@ -11,12 +11,18 @@ public:
     void paint(juce::Graphics&) override;
     void resized() override;
 
+    void mouseDown(const juce::MouseEvent& event) override;
+    void mouseDrag(const juce::MouseEvent& event) override;
+    void mouseUp(const juce::MouseEvent& event) override;
+
 private:
     struct Band
     {
         juce::String label;
         juce::Rectangle<int> rect;
+        juce::Rectangle<int> innerRect;
         float value;
+        juce::ParameterAttachment* attachment;
     };
 
     void parameterUpdated(int index, float value);
@@ -24,6 +30,10 @@ private:
     Parameters& params;
 
     std::array<Band, 3> bands;
+
+    Band* activeBand = nullptr;
+    float startPos = 0.0f;
+    float startValue = 0.0f;
 
     juce::ParameterAttachment bassAttachment;
     juce::ParameterAttachment midsAttachment;
