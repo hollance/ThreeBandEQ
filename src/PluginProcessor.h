@@ -1,18 +1,8 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "Parameters.h"
 #include "ThreeBandEQ.h"
-
-namespace ParameterID
-{
-    #define PARAMETER_ID(str) const juce::ParameterID str(#str, 1);
-
-    PARAMETER_ID(bass)
-    PARAMETER_ID(mids)
-    PARAMETER_ID(treble)
-
-    #undef PARAMETER_ID
-}
 
 class AudioProcessor : public juce::AudioProcessor
 {
@@ -42,22 +32,10 @@ public:
     void setStateInformation(const void* data, int sizeInBytes) override;
     juce::AudioProcessorEditor* createEditor() override;
 
-    juce::AudioProcessorValueTreeState apvts { *this, nullptr, "Parameters", createParameterLayout() };
-
-    juce::AudioParameterFloat* bassParam;
-    juce::AudioParameterFloat* midsParam;
-    juce::AudioParameterFloat* trebleParam;
+    juce::AudioProcessorValueTreeState apvts;
+    Parameters params;
 
 private:
-    juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
-
-    void update() noexcept;
-    void smoothen() noexcept;
-
-    juce::LinearSmoothedValue<float> bassSmoother;
-    juce::LinearSmoothedValue<float> midsSmoother;
-    juce::LinearSmoothedValue<float> trebleSmoother;
-
     ThreeBandEQ<float, 2> eq;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioProcessor)

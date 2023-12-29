@@ -74,6 +74,8 @@ juce_add_plugin(${PROJECT_NAME}
 juce_generate_juce_header(${PROJECT_NAME})
 
 target_sources(${PROJECT_NAME} PRIVATE
+    src/Parameters.cpp
+    src/Parameters.h
     src/PluginEditor.cpp
     src/PluginEditor.h
     src/PluginProcessor.cpp

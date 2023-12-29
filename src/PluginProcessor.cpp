@@ -1,70 +1,22 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-template<typename T>
-static void castParameter(juce::AudioProcessorValueTreeState& apvts, const juce::ParameterID& id, T& destination)
-{
-    destination = dynamic_cast<T>(apvts.getParameter(id.getParamID()));
-    jassert(destination);  // parameter does not exist or wrong type
-}
-
-static juce::String stringFromDecibels(float value, int)
-{
-    return juce::String(value, 1) + " dB";
-}
-
 AudioProcessor::AudioProcessor() :
     juce::AudioProcessor(
         BusesProperties()
             .withInput("Input", juce::AudioChannelSet::stereo(), true)
             .withOutput("Output", juce::AudioChannelSet::stereo(), true)
-        )
+    ),
+    apvts(*this, nullptr, "Parameters", Parameters::createParameterLayout()),
+    params(apvts)
 {
-    castParameter(apvts, ParameterID::bass, bassParam);
-    castParameter(apvts, ParameterID::mids, midsParam);
-    castParameter(apvts, ParameterID::treble, trebleParam);
-}
-
-juce::AudioProcessorValueTreeState::ParameterLayout AudioProcessor::createParameterLayout()
-{
-    juce::AudioProcessorValueTreeState::ParameterLayout layout;
-
-    layout.add(std::make_unique<juce::AudioParameterFloat>(
-        ParameterID::bass,
-        "Bass",
-        juce::NormalisableRange<float>(-6.0f, 6.0f, 0.1f),
-        0.0f,
-        juce::AudioParameterFloatAttributes()
-            .withStringFromValueFunction(stringFromDecibels)));
-
-    layout.add(std::make_unique<juce::AudioParameterFloat>(
-        ParameterID::mids,
-        "Mids",
-        juce::NormalisableRange<float>(-6.0f, 6.0f, 0.1f),
-        0.0f,
-        juce::AudioParameterFloatAttributes()
-            .withStringFromValueFunction(stringFromDecibels)));
-
-    layout.add(std::make_unique<juce::AudioParameterFloat>(
-        ParameterID::treble,
-        "Treble",
-        juce::NormalisableRange<float>(-6.0f, 6.0f, 0.1f),
-        0.0f,
-        juce::AudioParameterFloatAttributes()
-            .withStringFromValueFunction(stringFromDecibels)));
-
-    return layout;
+    // do nothing
 }
 
 void AudioProcessor::prepareToPlay(double sampleRate, [[maybe_unused]] int samplesPerBlock)
 {
-    double smoothTime = 0.02;
-    bassSmoother.reset(sampleRate, smoothTime);
-    midsSmoother.reset(sampleRate, smoothTime);
-    trebleSmoother.reset(sampleRate, smoothTime);
-
+    params.prepare(sampleRate);
     eq.prepare(float(sampleRate));
-
     reset();
 }
 
@@ -75,30 +27,13 @@ void AudioProcessor::releaseResources()
 
 void AudioProcessor::reset()
 {
-    bassSmoother.setCurrentAndTargetValue(bassParam->get());
-    midsSmoother.setCurrentAndTargetValue(midsParam->get());
-    trebleSmoother.setCurrentAndTargetValue(trebleParam->get());
-
+    params.reset();
     eq.reset();
 }
 
 bool AudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 {
     return layouts.getMainOutputChannelSet() == juce::AudioChannelSet::stereo();
-}
-
-void AudioProcessor::update() noexcept
-{
-    bassSmoother.setTargetValue(bassParam->get());
-    midsSmoother.setTargetValue(midsParam->get());
-    trebleSmoother.setTargetValue(trebleParam->get());
-}
-
-void AudioProcessor::smoothen() noexcept
-{
-    eq.setBassGain(bassSmoother.getNextValue());
-    eq.setMidsGain(midsSmoother.getNextValue());
-    eq.setTrebleGain(trebleSmoother.getNextValue());
 }
 
 void AudioProcessor::processBlock(
@@ -114,13 +49,17 @@ void AudioProcessor::processBlock(
         buffer.clear(i, 0, numSamples);
     }
 
-    update();
+    params.update();
 
     float* channelL = buffer.getWritePointer(0);
     float* channelR = buffer.getWritePointer(1);
 
     for (int sample = 0; sample < numSamples; ++sample) {
-        smoothen();
+        params.smoothen();
+
+        eq.setBassGain(params.bass);
+        eq.setMidsGain(params.mids);
+        eq.setTrebleGain(params.treble);
 
         float sampleL = channelL[sample];
         float sampleR = channelR[sample];
