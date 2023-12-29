@@ -3,10 +3,12 @@
 
 AudioProcessorEditor::AudioProcessorEditor(AudioProcessor& p) :
     juce::AudioProcessorEditor(&p),
-    audioProcessor(p)
+    audioProcessor(p),
+    controls(p.params)
 {
+    addAndMakeVisible(controls);
     setOpaque(true);
-    setSize(400, 200);
+    setSize(300, 150);
 }
 
 void AudioProcessorEditor::paint(juce::Graphics& g)
@@ -16,4 +18,5 @@ void AudioProcessorEditor::paint(juce::Graphics& g)
 
 void AudioProcessorEditor::resized()
 {
+    controls.setBounds(getLocalBounds());
 }
