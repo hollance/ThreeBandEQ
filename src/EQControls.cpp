@@ -82,9 +82,14 @@ void EQControls::mouseDown(const juce::MouseEvent& event)
         activeBand = &bands[2];
     }
 
-    startPos = event.position.getY();
-    startValue = activeBand->value;
-    activeBand->attachment->beginGesture();
+    if (event.mods.isAltDown()) {
+        activeBand->attachment->setValueAsCompleteGesture(0.0f);
+        activeBand = nullptr;
+    } else {
+        startPos = event.position.getY();
+        startValue = activeBand->value;
+        activeBand->attachment->beginGesture();
+    }
 }
 
 void EQControls::mouseDrag(const juce::MouseEvent& event)
