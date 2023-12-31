@@ -14,6 +14,7 @@ public:
     void mouseDown(const juce::MouseEvent& event) override;
     void mouseDrag(const juce::MouseEvent& event) override;
     void mouseUp(const juce::MouseEvent& event) override;
+    void mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) override;
 
 private:
     struct Band
@@ -23,17 +24,20 @@ private:
         juce::Rectangle<int> innerRect;
         float value;
         juce::ParameterAttachment* attachment;
+        juce::RangedAudioParameter* parameter;
     };
 
     void parameterUpdated(int index, float value);
+    int getBandY(const Band& band) const;
+    int indexOfBandAtPoint(const juce::Point<int>& point) const;
+    void setBandValue(Band& band, float referenceValue, float pixelDistance, bool isDragging);
 
     Parameters& params;
-
     std::array<Band, 3> bands;
-
     Band* activeBand = nullptr;
     float startPos = 0.0f;
     float startValue = 0.0f;
+    int lastUsedBand = 0;
 
     juce::ParameterAttachment bassAttachment;
     juce::ParameterAttachment midsAttachment;

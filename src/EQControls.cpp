@@ -7,12 +7,16 @@ EQControls::EQControls(Parameters& params_) :
     trebleAttachment(*params.trebleParam, [this](float f) { parameterUpdated(2, f); })
 {
     bands[0].label = "BASS";
-    bands[1].label = "MIDS";
-    bands[2].label = "TREBLE";
-
     bands[0].attachment = &bassAttachment;
+    bands[0].parameter = params.bassParam;
+
+    bands[1].label = "MIDS";
     bands[1].attachment = &midsAttachment;
+    bands[1].parameter = params.midsParam;
+
+    bands[2].label = "TREBLE";
     bands[2].attachment = &trebleAttachment;
+    bands[2].parameter = params.trebleParam;
 
     for (auto& band : bands) {
         band.attachment->sendInitialUpdate();
@@ -49,7 +53,7 @@ void EQControls::paint(juce::Graphics& g)
         g.setColour(juce::Colour(90, 90, 90));
         g.fillRect(rect.getX(), rect.getCentreY(), rect.getWidth(), 1);
 
-        int y = rect.getCentreY() - int(std::round(band.value * rect.getHeight() / 12.0f));
+        int y = getBandY(band);
         g.setColour(juce::Colours::white);
         g.fillRect(rect.getX(), y - 1, rect.getWidth(), 3);
 
@@ -66,21 +70,10 @@ void EQControls::paint(juce::Graphics& g)
     }
 }
 
-void EQControls::parameterUpdated(int index, float value)
-{
-    bands[size_t(index)].value = value;
-    repaint();
-}
-
 void EQControls::mouseDown(const juce::MouseEvent& event)
 {
-    if (event.getMouseDownX() < bands[0].rect.getRight()) {
-        activeBand = &bands[0];
-    } else if (event.getMouseDownX() < bands[1].rect.getRight()) {
-        activeBand = &bands[1];
-    } else {
-        activeBand = &bands[2];
-    }
+    int bandIndex = indexOfBandAtPoint(event.getMouseDownPosition());
+    activeBand = &bands[size_t(bandIndex)];
 
     if (event.mods.isAltDown()) {
         activeBand->attachment->setValueAsCompleteGesture(0.0f);
@@ -96,9 +89,7 @@ void EQControls::mouseDrag(const juce::MouseEvent& event)
 {
     if (activeBand != nullptr) {
         float distance = event.position.getY() - startPos;
-        float db = distance * 12.0f / float(activeBand->innerRect.getHeight());
-        float newValue = std::clamp(startValue - db, -6.0f, 6.0f);
-        activeBand->attachment->setValueAsPartOfGesture(newValue);
+        setBandValue(*activeBand, startValue, distance, true);
     }
 }
 
@@ -107,5 +98,62 @@ void EQControls::mouseUp([[maybe_unused]] const juce::MouseEvent& event)
     if (activeBand != nullptr) {
         activeBand->attachment->endGesture();
         activeBand = nullptr;
+    }
+}
+
+void EQControls::mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel)
+{
+    if (event.mods.isAnyMouseButtonDown()) { return; }
+
+    int bandIndex;
+    if (wheel.isInertial) {
+        bandIndex = lastUsedBand;  // can't change band when inertia
+    } else {
+        bandIndex = indexOfBandAtPoint(event.getPosition());
+        lastUsedBand = bandIndex;
+    }
+
+    Band& band = bands[size_t(bandIndex)];
+    float distance = wheel.deltaY * band.innerRect.getHeight() * (wheel.isSmooth ? 0.5f : 0.1f);
+    setBandValue(band, band.value, distance, false);
+}
+
+void EQControls::parameterUpdated(int index, float value)
+{
+    bands[size_t(index)].value = value;
+    repaint();
+}
+
+int EQControls::getBandY(const Band& band) const
+{
+    const auto& range = band.parameter->getNormalisableRange();
+    float extent = range.end - range.start;
+    return band.innerRect.getCentreY() - int(std::round(band.value * band.innerRect.getHeight() / extent));
+}
+
+int EQControls::indexOfBandAtPoint(const juce::Point<int>& point) const
+{
+    if (point.x < bands[0].rect.getRight()) {
+        return 0;
+    } else if (point.x < bands[1].rect.getRight()) {
+        return 1;
+    } else {
+        return 2;
+    }
+}
+
+void EQControls::setBandValue(Band& band, float referenceValue, float pixelDistance, bool isDragging)
+{
+    const auto& range = band.parameter->getNormalisableRange();
+    float minValue = range.start;
+    float maxValue = range.end;
+
+    float dbDistance = pixelDistance * (maxValue - minValue) / float(band.innerRect.getHeight());
+    float newValue = std::clamp(referenceValue - dbDistance, minValue, maxValue);
+
+    if (isDragging) {
+        band.attachment->setValueAsPartOfGesture(newValue);
+    } else {
+        band.attachment->setValueAsCompleteGesture(newValue);
     }
 }
