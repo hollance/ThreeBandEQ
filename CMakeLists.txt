@@ -58,8 +58,8 @@ set(FORMATS AU VST3 Standalone)
 
 juce_add_plugin(${PROJECT_NAME}
     COMPANY_NAME "audiodev.blog"
-    PLUGIN_MANUFACTURER_CODE EQ3b
-    PLUGIN_CODE Levl
+    PLUGIN_MANUFACTURER_CODE Dvbl
+    PLUGIN_CODE EQ3b
     BUNDLE_ID "blog.audiodev.threebandeq"
     IS_SYNTH FALSE
     NEEDS_MIDI_INPUT FALSE
