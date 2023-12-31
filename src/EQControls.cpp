@@ -40,6 +40,7 @@ void EQControls::paint(juce::Graphics& g)
     g.fillAll(juce::Colour(60, 60, 60));
     g.setFont(juce::Font("Arial", 16.0f, juce::Font::plain));
 
+    juce::Path path;
     for (auto& band : bands) {
         auto gradientRect = band.rect.withTrimmedBottom(40).reduced(2, 0);
         juce::ColourGradient gradient(
@@ -54,13 +55,21 @@ void EQControls::paint(juce::Graphics& g)
         g.fillRect(rect.getX(), rect.getCentreY(), rect.getWidth(), 1);
 
         int y = getBandY(band);
-        g.setColour(juce::Colours::white);
-        g.fillRect(rect.getX(), y - 1, rect.getWidth(), 3);
+        if (path.isEmpty()) {
+            path.startNewSubPath(rect.getX(), y);
+        } else {
+            path.lineTo(rect.getX(), y);
+        }
+        path.lineTo(rect.getRight(), y);
 
         auto text = juce::String(band.value, 1) + " dB";
         y += (band.value >= 0.0f) ? -4 : 15;
+        g.setColour(juce::Colours::white);
         g.drawSingleLineText(text, band.rect.getCentreX(), y, juce::Justification::horizontallyCentred);
     }
+
+    g.setColour(juce::Colours::white);
+    g.strokePath(path, juce::PathStrokeType(3.0f, juce::PathStrokeType::JointStyle::curved));
 
     g.setColour(juce::Colours::white);
     for (auto& band : bands) {
