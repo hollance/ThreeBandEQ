@@ -31,8 +31,12 @@ void EQControls::resized()
     bands[2].rect.setBounds(bands[1].rect.getRight(), 0, bounds.getWidth() - bands[1].rect.getRight(), bounds.getHeight());
 
     for (auto& band : bands) {
-        band.innerRect = band.rect.withTrimmedTop(20).withTrimmedBottom(40).reduced(10, 0);
+        band.innerRect = band.rect.withTrimmedTop(20).withTrimmedBottom(40);
     }
+
+    bands[0].innerRect = bands[0].innerRect.withTrimmedRight(10);
+    bands[1].innerRect.reduce(10, 0);
+    bands[2].innerRect = bands[2].innerRect.withTrimmedLeft(10);
 }
 
 void EQControls::paint(juce::Graphics& g)
@@ -40,16 +44,21 @@ void EQControls::paint(juce::Graphics& g)
     g.fillAll(juce::Colour(60, 60, 60));
     g.setFont(juce::Font("Arial", 16.0f, juce::Font::plain));
 
+    auto bounds = getLocalBounds();
+    auto gradientRect = bounds.withTrimmedBottom(40);
+    juce::ColourGradient gradient(
+        juce::Colour(30, 30, 30), gradientRect.getTopLeft().toFloat(),
+        juce::Colour(60, 60, 60), gradientRect.getBottomLeft().toFloat(),
+        false);
+    g.setGradientFill(gradient);
+    g.fillRect(gradientRect);
+
+    g.setColour(juce::Colour(60, 60, 60));
+    g.fillRect(bands[1].rect.getX() - 1, 0, 2, bounds.getHeight());
+    g.fillRect(bands[2].rect.getX() - 1, 0, 2, bounds.getHeight());
+
     juce::Path path;
     for (auto& band : bands) {
-        auto gradientRect = band.rect.withTrimmedBottom(40).reduced(2, 0);
-        juce::ColourGradient gradient(
-            juce::Colour(30, 30, 30), gradientRect.getTopLeft().toFloat(),
-            juce::Colour(60, 60, 60), gradientRect.getBottomLeft().toFloat(),
-            false);
-        g.setGradientFill(gradient);
-        g.fillRect(gradientRect);
-
         auto rect = band.innerRect;
         g.setColour(juce::Colour(90, 90, 90));
         g.fillRect(rect.getX(), rect.getCentreY(), rect.getWidth(), 1);
@@ -68,7 +77,7 @@ void EQControls::paint(juce::Graphics& g)
         g.drawSingleLineText(text, band.rect.getCentreX(), y, juce::Justification::horizontallyCentred);
     }
 
-    g.setColour(juce::Colours::white);
+    g.setColour(juce::Colour(228, 88, 100));
     g.strokePath(path, juce::PathStrokeType(3.0f, juce::PathStrokeType::JointStyle::curved));
 
     g.setColour(juce::Colours::white);
