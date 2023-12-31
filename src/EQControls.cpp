@@ -58,9 +58,9 @@ void EQControls::paint(juce::Graphics& g)
     g.fillRect(bands[2].rect.getX() - 1, 0, 2, bounds.getHeight());
 
     juce::Path path;
-    int prevY = 0;
-    int prevX = 0;
-    const int roundness = 20;
+    float prevY = 0.0f;
+    float prevX = 0.0f;
+    const float roundness = 20.0f;
 
     for (size_t i = 0; i < 3; ++i) {
         const auto& band = bands[i];
@@ -76,26 +76,28 @@ void EQControls::paint(juce::Graphics& g)
         g.drawSingleLineText(
             juce::String(band.value, 1) + " dB",
             band.rect.getCentreX(),
-            bandY + (band.value >= 0.0f ? -4 : 15),
+            bandY + (band.value >= 0.0f ? -4 : 16),
             juce::Justification::horizontallyCentred);
 
         g.drawSingleLineText(
             band.label, band.rect.getCentreX(), band.rect.getBottom() - 4,
             juce::Justification::horizontallyCentred);
 
+        float y = float(bandY) + 0.5f;
+        float left = float(band.innerRect.getX());
+        float right = float(band.innerRect.getRight());
+
         if (path.isEmpty()) {
-            path.startNewSubPath(band.innerRect.getX(), bandY);
+            path.startNewSubPath(left, y);
         } else {
-            path.cubicTo(prevX + roundness, prevY,
-                         band.innerRect.getX() - roundness, bandY,
-                         band.innerRect.getX() + roundness, bandY);
+            path.cubicTo(prevX + roundness, prevY, left - roundness, y, left + roundness, y);
         }
         if (i < 2) {
-            prevX = band.innerRect.getRight();
-            prevY = bandY;
-            path.lineTo(prevX - roundness, bandY);
+            prevX = right;
+            prevY = y;
+            path.lineTo(prevX - roundness, y);
         } else {
-            path.lineTo(band.innerRect.getRight(), bandY);
+            path.lineTo(right, y);
         }
     }
     g.setColour(juce::Colour(228, 88, 100));
@@ -146,7 +148,7 @@ void EQControls::mouseWheelMove(const juce::MouseEvent& event, const juce::Mouse
     }
 
     Band& band = bands[size_t(bandIndex)];
-    float distance = wheel.deltaY * band.innerRect.getHeight() * (wheel.isSmooth ? 0.5f : 0.1f);
+    float distance = wheel.deltaY * band.innerRect.getHeight() * (wheel.isSmooth ? 0.5f : 0.25f);
     setBandValue(band, band.value, distance, false);
 }
 
