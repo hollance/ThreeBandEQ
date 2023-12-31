@@ -58,34 +58,48 @@ void EQControls::paint(juce::Graphics& g)
     g.fillRect(bands[2].rect.getX() - 1, 0, 2, bounds.getHeight());
 
     juce::Path path;
-    for (auto& band : bands) {
-        auto rect = band.innerRect;
+    int prevY = 0;
+    int prevX = 0;
+    const int roundness = 20;
+
+    for (size_t i = 0; i < 3; ++i) {
+        const auto& band = bands[i];
+        const auto& range = band.parameter->getNormalisableRange();
+        float extent = range.end - range.start;
+        int dbToPixels = int(std::round(band.value * band.innerRect.getHeight() / extent));
+        int bandY = band.innerRect.getCentreY() - dbToPixels;
+
         g.setColour(juce::Colour(90, 90, 90));
-        g.fillRect(rect.getX(), rect.getCentreY(), rect.getWidth(), 1);
+        g.fillRect(band.innerRect.getX(), band.innerRect.getCentreY(), band.innerRect.getWidth(), 1);
 
-        int y = getBandY(band);
-        if (path.isEmpty()) {
-            path.startNewSubPath(rect.getX(), y);
-        } else {
-            path.lineTo(rect.getX(), y);
-        }
-        path.lineTo(rect.getRight(), y);
-
-        auto text = juce::String(band.value, 1) + " dB";
-        y += (band.value >= 0.0f) ? -4 : 15;
         g.setColour(juce::Colours::white);
-        g.drawSingleLineText(text, band.rect.getCentreX(), y, juce::Justification::horizontallyCentred);
-    }
+        g.drawSingleLineText(
+            juce::String(band.value, 1) + " dB",
+            band.rect.getCentreX(),
+            bandY + (band.value >= 0.0f ? -4 : 15),
+            juce::Justification::horizontallyCentred);
 
-    g.setColour(juce::Colour(228, 88, 100));
-    g.strokePath(path, juce::PathStrokeType(3.0f, juce::PathStrokeType::JointStyle::curved));
-
-    g.setColour(juce::Colours::white);
-    for (auto& band : bands) {
         g.drawSingleLineText(
             band.label, band.rect.getCentreX(), band.rect.getBottom() - 4,
             juce::Justification::horizontallyCentred);
+
+        if (path.isEmpty()) {
+            path.startNewSubPath(band.innerRect.getX(), bandY);
+        } else {
+            path.cubicTo(prevX + roundness, prevY,
+                         band.innerRect.getX() - roundness, bandY,
+                         band.innerRect.getX() + roundness, bandY);
+        }
+        if (i < 2) {
+            prevX = band.innerRect.getRight();
+            prevY = bandY;
+            path.lineTo(prevX - roundness, bandY);
+        } else {
+            path.lineTo(band.innerRect.getRight(), bandY);
+        }
     }
+    g.setColour(juce::Colour(228, 88, 100));
+    g.strokePath(path, juce::PathStrokeType(3.0f));
 }
 
 void EQControls::mouseDown(const juce::MouseEvent& event)
@@ -140,13 +154,6 @@ void EQControls::parameterUpdated(int index, float value)
 {
     bands[size_t(index)].value = value;
     repaint();
-}
-
-int EQControls::getBandY(const Band& band) const
-{
-    const auto& range = band.parameter->getNormalisableRange();
-    float extent = range.end - range.start;
-    return band.innerRect.getCentreY() - int(std::round(band.value * band.innerRect.getHeight() / extent));
 }
 
 int EQControls::indexOfBandAtPoint(const juce::Point<int>& point) const

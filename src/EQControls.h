@@ -28,7 +28,6 @@ private:
     };
 
     void parameterUpdated(int index, float value);
-    int getBandY(const Band& band) const;
     int indexOfBandAtPoint(const juce::Point<int>& point) const;
     void setBandValue(Band& band, float referenceValue, float pixelDistance, bool isDragging);
 
